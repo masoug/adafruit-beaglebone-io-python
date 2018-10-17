@@ -35,7 +35,7 @@ SOFTWARE.
 
 #include "adafruit/bbio/error.h"
 #ifdef __cplusplus
-using adafruit::bbio::BBIO_err;
+//using adafruit::bbio::BBIO_err;
 #endif
 
 #define MODE_UNKNOWN -1

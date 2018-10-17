@@ -38,34 +38,15 @@ SOFTWARE.
 #include "c_pinmux.h"
 #endif
 
-#define KEYLEN 7
-#define PIN_MODE_LEN 5
-
 int pwm_initialized = 0;
 
-// pwm exports
-struct pwm_exp
-{
-    char key[KEYLEN+1]; /* leave room for terminating NUL byte */
-    int period_fd;
-    int duty_fd;
-    int polarity_fd;
-#ifdef BBBVERSION41
-    int enable_fd;
-#endif
-    float duty;
-    unsigned long duty_ns;
-    unsigned long period_ns;
-    struct pwm_exp *next;
-};
 struct pwm_exp *exported_pwms = NULL;
 
-struct pwm_exp *lookup_exported_pwm(const char *key)
-{
+
+struct pwm_exp *lookup_exported_pwm(const char *key) {
     struct pwm_exp *pwm = exported_pwms;
 
-    while (pwm != NULL)
-    {
+    while (pwm != NULL) {
         if (strcmp(pwm->key, key) == 0) {
             return pwm;
         }
@@ -77,12 +58,10 @@ struct pwm_exp *lookup_exported_pwm(const char *key)
 }
 
 // Export PWM to the list
-void export_pwm(struct pwm_exp *new_pwm)
-{
+void export_pwm(struct pwm_exp *new_pwm) {
     struct pwm_exp *pwm;
 
-    if (exported_pwms == NULL)
-    {
+    if (exported_pwms == NULL) {
         // create new list
         exported_pwms = new_pwm;
     } else {
@@ -94,17 +73,15 @@ void export_pwm(struct pwm_exp *new_pwm)
     }
 }
 
-BBIO_err initialize_pwm(void)
-{
+BBIO_err initialize_pwm(void) {
 #ifdef BBBVERSION41  // don't load overlay in 4.1+
     if (!pwm_initialized) {
         strncpy(ocp_dir, "/sys/devices/platform/ocp", sizeof(ocp_dir));
 #else
     BBIO_err err;
-    if  (!pwm_initialized && load_device_tree("am33xx_pwm")) {
+    if (!pwm_initialized && load_device_tree("am33xx_pwm")) {
         err = build_path("/sys/devices", "ocp", ocp_dir, sizeof(ocp_dir));
-        if (err != BBIO_OK)
-        {
+        if (err != BBIO_OK) {
             return BBIO_SYSFS;
         }
 #endif
@@ -135,7 +112,7 @@ BBIO_err pwm_set_frequency(const char *key, float freq) {
         return BBIO_GEN;
     }
 
-    period_ns = (unsigned long)(1e9 / freq);
+    period_ns = (unsigned long) (1e9 / freq);
 
     // If we're going to a shorter period, update the
     // duty cycle first, in order to avoid ever setting
@@ -144,7 +121,7 @@ BBIO_err pwm_set_frequency(const char *key, float freq) {
         pwm->period_ns = period_ns;
 
         // Update duty ns
-        pwm->duty_ns = (unsigned long)(period_ns * (pwm->duty / 100.0));
+        pwm->duty_ns = (unsigned long) (period_ns * (pwm->duty / 100.0));
         len = snprintf(buffer, sizeof(buffer), "%lu", pwm->duty_ns);
         lseek(pwm->duty_fd, 0, SEEK_SET); // Seek to beginning of file
         if (write(pwm->duty_fd, buffer, len) < 0) {
@@ -178,7 +155,7 @@ BBIO_err pwm_set_frequency(const char *key, float freq) {
         }
 
         // Update duty ns
-        pwm->duty_ns = (unsigned long)(period_ns * (pwm->duty / 100.0));
+        pwm->duty_ns = (unsigned long) (period_ns * (pwm->duty / 100.0));
         len = snprintf(buffer, sizeof(buffer), "%lu", pwm->duty_ns);
         lseek(pwm->duty_fd, 0, SEEK_SET); // Seek to beginning of file
         if (write(pwm->duty_fd, buffer, len) < 0) {
@@ -289,7 +266,7 @@ BBIO_err pwm_set_duty_cycle(const char *key, float duty) {
     }
 
     pwm->duty = duty;
-    pwm->duty_ns = (unsigned long)(pwm->period_ns * (duty / 100.0));
+    pwm->duty_ns = (unsigned long) (pwm->period_ns * (duty / 100.0));
 
     len = snprintf(buffer, sizeof(buffer), "%lu", pwm->duty_ns);
     lseek(pwm->duty_fd, 0, SEEK_SET); // Seek to beginning of file
@@ -303,8 +280,29 @@ BBIO_err pwm_set_duty_cycle(const char *key, float duty) {
     return BBIO_OK;
 }
 
-BBIO_err pwm_setup(const char *key, __attribute__ ((unused)) float duty, __attribute__ ((unused)) float freq, __attribute__ ((unused)) int polarity)
-{
+BBIO_err pwm_set_duty_cycle_exp(struct pwm_exp *pwm, float duty) {
+    int len;
+    char buffer[20];
+
+    if (duty < 0.0 || duty > 100.0)
+        return BBIO_INVARG;
+
+    pwm->duty = duty;
+    pwm->duty_ns = (unsigned long) (pwm->period_ns * (duty / 100.0));
+
+    len = snprintf(buffer, sizeof(buffer), "%lu", pwm->duty_ns);
+    lseek(pwm->duty_fd, 0, SEEK_SET); // Seek to beginning of file
+    if (write(pwm->duty_fd, buffer, len) < 0) {
+        syslog(LOG_ERR, "Adafruit_BBIO: pwm_set_duty_cycle: %s couldn't write duty: %i-%s", pwm->key, errno,
+               strerror(errno));
+        return BBIO_SYSFS;
+    }
+
+    return BBIO_OK;
+}
+
+BBIO_err pwm_setup(const char *key, __attribute__ ((unused)) float duty, __attribute__ ((unused)) float freq,
+                   __attribute__ ((unused)) int polarity) {
     BBIO_err err;
     struct pwm_exp *new_pwm;
 
@@ -457,7 +455,7 @@ BBIO_err pwm_setup(const char *key, __attribute__ ((unused)) float duty, __attri
                 }
             } else {
               strncpy(pwm_path, pwm_path_udev, sizeof(pwm_path_udev));
-	      usleep(100*1000);
+          usleep(100*1000);
             }
         }
     }
@@ -580,8 +578,7 @@ BBIO_err pwm_setup(const char *key, __attribute__ ((unused)) float duty, __attri
     return BBIO_OK;
 }
 
-BBIO_err pwm_start(const char *key, float duty, float freq, int polarity)
-{
+BBIO_err pwm_start(const char *key, float duty, float freq, int polarity) {
     syslog(LOG_DEBUG, "Adafruit_BBIO: pwm_start: %s, %f, %f, %i", key, duty, freq, polarity);
 
     BBIO_err err;
@@ -614,7 +611,7 @@ BBIO_err pwm_start(const char *key, float duty, float freq, int polarity)
         syslog(LOG_ERR, "Adafruit_BBIO: pwm_start: %s couldn't read period: %i-%s",
                key, errno, strerror(errno));
         return BBIO_SYSFS;
-    } else if (len >= (ssize_t)sizeof(buffer)) {
+    } else if (len >= (ssize_t) sizeof(buffer)) {
         // If this is the case, there's more in the file.
         // This should never happen, as it would mean that
         // the period is 10^8 seconds
@@ -632,7 +629,7 @@ BBIO_err pwm_start(const char *key, float duty, float freq, int polarity)
         syslog(LOG_ERR, "Adafruit_BBIO: pwm_start: %s couldn't read duty: %i-%s",
                key, errno, strerror(errno));
         return BBIO_SYSFS;
-    } else if (len >= (ssize_t)sizeof(buffer)) {
+    } else if (len >= (ssize_t) sizeof(buffer)) {
         // If this is the case, there's more in the file.
         // This should never happen, as it would mean that
         // the period is 10^8 seconds
@@ -683,8 +680,7 @@ BBIO_err pwm_start(const char *key, float duty, float freq, int polarity)
 }
 
 
-BBIO_err pwm_disable(const char *key)
-{
+BBIO_err pwm_disable(const char *key) {
     struct pwm_exp *pwm, *temp, *prev_pwm = NULL;
 
 #ifndef BBBVERSION41
@@ -698,26 +694,24 @@ BBIO_err pwm_disable(const char *key)
 
     // remove from list
     pwm = exported_pwms;
-    while (pwm != NULL)
-    {
-        if (strcmp(pwm->key, key) == 0)
-        {
+    while (pwm != NULL) {
+        if (strcmp(pwm->key, key) == 0) {
 
 #ifdef BBBVERSION41
-	        char buffer[2];
-	        size_t len;
+            char buffer[2];
+            size_t len;
 
-	        // Disable the PWM
-	        lseek(pwm->enable_fd, 0, SEEK_SET);
-	        len = snprintf(buffer, sizeof(buffer), "0");
-	        if (write(pwm->enable_fd, buffer, len) < 0) {
-	          syslog(LOG_ERR, "Adafruit_BBIO: pwm_disable: %s couldn't write enable: %i-%s",
-	                 key, errno, strerror(errno));
-		        return BBIO_SYSFS;
-	        }
+            // Disable the PWM
+            lseek(pwm->enable_fd, 0, SEEK_SET);
+            len = snprintf(buffer, sizeof(buffer), "0");
+            if (write(pwm->enable_fd, buffer, len) < 0) {
+              syslog(LOG_ERR, "Adafruit_BBIO: pwm_disable: %s couldn't write enable: %i-%s",
+                     key, errno, strerror(errno));
+                return BBIO_SYSFS;
+            }
 
-	        // Unexport the PWM
-	        // TODO later
+            // Unexport the PWM
+            // TODO later
 #endif
 
             //close the fd
@@ -728,8 +722,7 @@ BBIO_err pwm_disable(const char *key)
             close(pwm->duty_fd);
             close(pwm->polarity_fd);
 
-            if (prev_pwm == NULL)
-            {
+            if (prev_pwm == NULL) {
                 exported_pwms = pwm->next;
                 prev_pwm = pwm;
             } else {
@@ -749,9 +742,9 @@ BBIO_err pwm_disable(const char *key)
     return BBIO_OK;
 }
 
-void pwm_cleanup(void)
-{
+void pwm_cleanup(void) {
     while (exported_pwms != NULL) {
         pwm_disable(exported_pwms->key);
     }
 }
+

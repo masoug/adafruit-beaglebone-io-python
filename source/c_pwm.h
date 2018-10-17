@@ -25,11 +25,31 @@ SOFTWARE.
 
 #include "common.h"
 
+#define KEYLEN 7
+#define PIN_MODE_LEN 5
+
+// pwm exports
+struct pwm_exp {
+    char key[KEYLEN + 1]; /* leave room for terminating NUL byte */
+    int period_fd;
+    int duty_fd;
+    int polarity_fd;
+#ifdef BBBVERSION41
+    int enable_fd;
+#endif
+    float duty;
+    unsigned long duty_ns;
+    unsigned long period_ns;
+    struct pwm_exp *next;
+};
+
+struct pwm_exp *lookup_exported_pwm(const char *key);
 BBIO_err initialize_pwm(void);
 BBIO_err pwm_start(const char *key, float duty, float freq, int polarity);
 BBIO_err pwm_disable(const char *key);
 BBIO_err pwm_set_frequency(const char *key, float freq);
 BBIO_err pwm_set_duty_cycle(const char *key, float duty);
+BBIO_err pwm_set_duty_cycle_exp(struct pwm_exp*, float duty);
 BBIO_err pwm_set_polarity(const char *key, int polarity);
 void pwm_cleanup(void);
 
