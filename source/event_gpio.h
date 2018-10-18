@@ -66,6 +66,7 @@ void exports_cleanup(void);
 BBIO_err gpio_set_direction(unsigned int gpio, unsigned int in_flag);
 BBIO_err gpio_get_direction(unsigned int gpio, unsigned int *value);
 BBIO_err gpio_set_value(unsigned int gpio, unsigned int value);
+BBIO_err gpio_set_value_fd(int fd, unsigned int value);
 BBIO_err gpio_get_value(unsigned int gpio, unsigned int *value);
 
 int add_edge_detect(unsigned int gpio, unsigned int edge);
