@@ -46,11 +46,11 @@ SOFTWARE.
 #include "common.h"
 
 #include <linux/version.h>
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(4,1,0)
-#  ifndef BBBVERSION41
-#    define BBBVERSION41
-#  endif
-#endif
+//#if LINUX_VERSION_CODE >= KERNEL_VERSION(4,1,0)
+//#  ifndef BBBVERSION41
+//#    define BBBVERSION41
+//#  endif
+//#endif
 
 int gpio_mode;
 int gpio_direction[120];
@@ -488,6 +488,7 @@ BBIO_err build_path(const char *partial_path, const char *prefix, char *full_pat
     size_t len = strlen(partial_path) + strlen(prefix) + 5;
     char *pattern = malloc(len);
     snprintf(pattern, len, "%s/%s*", partial_path, prefix);
+    syslog(LOG_INFO, "pwm_setup: glob pattern=%s", pattern);
 
 /*  int glob(const char *pattern, int flags,
                 int (*errfunc) (const char *epath, int eerrno),

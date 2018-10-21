@@ -484,6 +484,7 @@ BBIO_err pwm_setup(const char *key, __attribute__ ((unused)) float duty, __attri
     err = load_device_tree(fragment);
     if (err != BBIO_OK) {
         //error enabling pin for pwm
+        syslog(LOG_ERR, "pwm_setup: failed to enable pin for pwm");
         return err;
     }
 
@@ -493,12 +494,14 @@ BBIO_err pwm_setup(const char *key, __attribute__ ((unused)) float duty, __attri
     // Initialize the ocp_dir
     err = build_path("/sys/devices", "ocp", ocp_dir, sizeof(ocp_dir));
     if (err != BBIO_OK) {
+        syslog(LOG_ERR, "pwm_setup: failed to initialize ocp_dir");
         return err;
     }
 
     //finds and builds the pwm_path, as it can be variable...
     err = build_path(ocp_dir, pwm_fragment, pwm_path, sizeof(pwm_path));
     if (err != BBIO_OK) {
+        syslog(LOG_ERR, "pwm_setup: failed to build pwm_path");
         return err;
     }
 
