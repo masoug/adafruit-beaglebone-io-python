@@ -129,6 +129,7 @@ BBIO_err pwm_set_frequency(const char *key, float freq) {
                    key, errno, strerror(errno));
             return BBIO_SYSFS;
         }
+        syslog(LOG_DEBUG, "Adafruit_BBIO: pwm_set_frequency: %s duty=%lu", key, pwm->duty_ns);
 
         // Update period ns
         len = snprintf(buffer, sizeof(buffer), "%lu", period_ns);
@@ -622,6 +623,7 @@ BBIO_err pwm_start(const char *key, float duty, float freq, int polarity) {
     }
     // Set the period_ns from the file
     sscanf(buffer, "%lu", &(pwm->period_ns));
+    syslog(LOG_DEBUG, "Adafruit_BBIO: pwm_start: pwm->period_ns=%lu", pwm->period_ns);
 
     // Read out the current duty_ns from the file, in order for it to
     // behave properly
@@ -647,13 +649,6 @@ BBIO_err pwm_start(const char *key, float duty, float freq, int polarity) {
     err = pwm_set_frequency(key, freq);
     if (err != BBIO_OK) {
         syslog(LOG_ERR, "Adafruit_BBIO: pwm_start: %s couldn't set duty frequency: %i", key, err);
-        return err;
-    }
-
-    syslog(LOG_DEBUG, "Adafruit_BBIO: pwm_start: call pwm_set_duty_cycle(key=%s duty=%f)", key, duty);
-    err = pwm_set_duty_cycle(key, duty);
-    if (err != BBIO_OK) {
-        syslog(LOG_ERR, "Adafruit_BBIO: pwm_start: %s couldn't set duty cycle: %i", key, err);
         return err;
     }
 
